@@ -31,8 +31,10 @@ targets:
       base:
         INFOPLIST_FILE: MobileMux/Info.plist
         PRODUCT_BUNDLE_IDENTIFIER: com.curtisjm.MobileMux
+        PRODUCT_NAME: MobileMux
         TARGETED_DEVICE_FAMILY: "1,2"
         SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD: false
+        ALWAYS_SEARCH_USER_PATHS: false
     dependencies:
       - package: swift-nio-ssh
         product: NIOSSH

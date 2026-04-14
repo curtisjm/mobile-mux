@@ -2,7 +2,7 @@ import Foundation
 import Security
 
 /// Stores and retrieves SSH credentials from the iOS Keychain
-final class KeychainService {
+final class KeychainService: Sendable {
     static let shared = KeychainService()
     private init() {}
 

@@ -106,6 +106,7 @@ struct TmuxControlModeParser {
 }
 
 /// Manages a tmux control mode session over an SSH channel
+@MainActor
 @Observable
 final class TmuxControlModeClient {
     private(set) var sessions: [TmuxSession] = []
@@ -129,16 +130,17 @@ final class TmuxControlModeClient {
         try await channel.write("tmux -CC attach -t \(session)\n".data(using: .utf8)!)
         isConnected = true
 
-        // Process the event stream
-        Task {
+        // Process the event stream on the main actor
+        Task { @MainActor [weak self] in
+            guard let self else { return }
             for await data in channel.outputStream {
                 guard let text = String(data: data, encoding: .utf8) else { continue }
                 for line in text.split(separator: "\n", omittingEmptySubsequences: false) {
-                    let event = parser.parse(line: String(line))
-                    await handleEvent(event)
+                    let event = self.parser.parse(line: String(line))
+                    self.handleEvent(event)
                 }
             }
-            isConnected = false
+            self.isConnected = false
         }
     }
 
@@ -154,7 +156,6 @@ final class TmuxControlModeClient {
         try await channel.write(command.data(using: .utf8)!)
     }
 
-    @MainActor
     private func handleEvent(_ event: TmuxEvent) {
         switch event {
         case .sessionChanged(_, let name):

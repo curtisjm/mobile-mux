@@ -2,6 +2,7 @@ import Foundation
 import SwiftUI
 
 /// Manages the lifecycle of SSH connections and tmux control mode clients
+@MainActor
 @Observable
 final class ConnectionManager {
     private(set) var activeConnections: [UUID: ActiveConnection] = [:]
