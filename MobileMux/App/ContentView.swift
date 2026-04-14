@@ -1,10 +1,14 @@
 import SwiftUI
 
 struct ContentView: View {
+    @State private var connectionManager = ConnectionManager()
+
     var body: some View {
         NavigationStack {
-            ServerListView()
+            ServerListView(connectionManager: connectionManager)
         }
+        .tint(MMColors.teal)
+        .preferredColorScheme(.dark)
     }
 }
 

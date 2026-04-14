@@ -9,111 +9,172 @@ struct PaneNavigatorView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Pane cards for the selected window
+            // Window tab bar at top
+            windowTabBar
+                .background(.bar)
+
+            Divider()
+
+            // Pane cards
             ScrollView {
                 if selectedWindowIndex < session.windows.count {
                     let window = session.windows[selectedWindowIndex]
-                    LazyVStack(spacing: 12) {
+                    LazyVStack(spacing: MMSpacing.md) {
                         ForEach(window.panes) { pane in
                             PaneCardView(pane: pane)
                         }
                     }
-                    .padding()
+                    .padding(.horizontal)
+                    .padding(.vertical, MMSpacing.md)
                 }
             }
-
-            Divider()
-
-            // Window tab bar
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 4) {
-                    ForEach(Array(session.windows.enumerated()), id: \.element.id) { index, window in
-                        Button {
-                            withAnimation(.snappy) {
-                                selectedWindowIndex = index
-                            }
-                        } label: {
-                            Text(window.name.isEmpty ? "\(index)" : window.name)
-                                .font(.caption)
-                                .fontWeight(index == selectedWindowIndex ? .semibold : .regular)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 8)
-                                .background(
-                                    index == selectedWindowIndex
-                                        ? Color.accentColor.opacity(0.15)
-                                        : Color.clear
-                                )
-                                .clipShape(RoundedRectangle(cornerRadius: 8))
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .padding(.horizontal)
-                .padding(.vertical, 6)
-            }
-            .background(.bar)
         }
+        .background(Color(.systemGroupedBackground))
         .navigationTitle(session.name)
         .navigationBarTitleDisplayMode(.inline)
         .gesture(
             DragGesture(minimumDistance: 50)
                 .onEnded { value in
                     if value.translation.width < -50, selectedWindowIndex < session.windows.count - 1 {
-                        withAnimation(.snappy) { selectedWindowIndex += 1 }
+                        withAnimation(.snappy(duration: 0.25)) { selectedWindowIndex += 1 }
                     } else if value.translation.width > 50, selectedWindowIndex > 0 {
-                        withAnimation(.snappy) { selectedWindowIndex -= 1 }
+                        withAnimation(.snappy(duration: 0.25)) { selectedWindowIndex -= 1 }
                     }
                 }
         )
     }
+
+    private var windowTabBar: some View {
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: MMSpacing.xs) {
+                    ForEach(Array(session.windows.enumerated()), id: \.element.id) { index, window in
+                        Button {
+                            withAnimation(.snappy(duration: 0.25)) {
+                                selectedWindowIndex = index
+                            }
+                        } label: {
+                            HStack(spacing: MMSpacing.xs) {
+                                if window.panes.contains(where: { $0.agentType == .claudeCode }) {
+                                    Image(systemName: "cpu")
+                                        .font(.system(size: 10))
+                                }
+                                Text(window.name.isEmpty ? "\(index)" : window.name)
+                                    .font(.subheadline)
+                                    .fontWeight(index == selectedWindowIndex ? .semibold : .regular)
+                            }
+                            .padding(.horizontal, MMSpacing.md)
+                            .padding(.vertical, MMSpacing.sm)
+                            .foregroundStyle(
+                                index == selectedWindowIndex
+                                    ? MMColors.teal
+                                    : .secondary
+                            )
+                            .background(
+                                index == selectedWindowIndex
+                                    ? MMColors.teal.opacity(0.12)
+                                    : Color.clear
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: MMRadius.sm))
+                        }
+                        .buttonStyle(.plain)
+                        .id(index)
+                    }
+                }
+                .padding(.horizontal)
+                .padding(.vertical, MMSpacing.sm)
+            }
+            .onChange(of: selectedWindowIndex) { _, newValue in
+                withAnimation {
+                    proxy.scrollTo(newValue, anchor: .center)
+                }
+            }
+        }
+    }
 }
+
+// MARK: - Pane Card
 
 struct PaneCardView: View {
     let pane: TmuxPane
 
+    private var isAgent: Bool { pane.agentType == .claudeCode }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: MMSpacing.md) {
             // Header
             HStack {
-                Label(
-                    pane.agentType == .claudeCode ? "Claude Code" : "Terminal",
-                    systemImage: pane.agentType == .claudeCode ? "cpu" : "terminal"
-                )
-                .font(.subheadline)
-                .fontWeight(.medium)
+                HStack(spacing: MMSpacing.sm) {
+                    Image(systemName: isAgent ? "cpu" : "terminal")
+                        .font(.subheadline)
+                        .foregroundStyle(isAgent ? MMColors.indigo : MMColors.teal)
+
+                    Text(isAgent ? "Claude Code" : "Terminal")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                }
 
                 Spacer()
 
                 if let command = pane.currentCommand {
                     Text(command)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
                 }
             }
 
             // Output preview
-            VStack(alignment: .leading, spacing: 2) {
-                ForEach(Array(pane.recentOutput.suffix(6).enumerated()), id: \.offset) { _, line in
-                    Text(line)
-                        .font(.system(.caption, design: .monospaced))
-                        .lineLimit(1)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(10)
-            .background(.fill.quinary)
-            .clipShape(RoundedRectangle(cornerRadius: 8))
+            TerminalBlock(lines: pane.recentOutput)
 
-            // Interaction hint
+            // Footer
             HStack {
+                if isAgent {
+                    StatusBadge.writing
+                }
+
                 Spacer()
+
                 Label("Tap to interact", systemImage: "hand.tap")
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
         }
-        .padding()
-        .background(.background.secondary)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .mmCard()
+        .overlay(
+            RoundedRectangle(cornerRadius: MMRadius.md)
+                .strokeBorder(
+                    isAgent
+                        ? MMColors.indigo.opacity(0.3)
+                        : Color.clear,
+                    lineWidth: 1
+                )
+        )
     }
+}
+
+// MARK: - Previews
+
+#Preview("Pane Navigator") {
+    NavigationStack {
+        PaneNavigatorView(
+            session: PreviewData.sessions[0],
+            connectionManager: ConnectionManager(),
+            server: ServerConnection(nickname: "dev", host: "dev.example.com", username: "curtis")
+        )
+    }
+    .preferredColorScheme(.dark)
+    .tint(MMColors.teal)
+}
+
+#Preview("Pane Cards") {
+    ScrollView {
+        VStack(spacing: MMSpacing.md) {
+            PaneCardView(pane: PreviewData.sessions[0].windows[0].panes[0])
+            PaneCardView(pane: PreviewData.sessions[0].windows[3].panes[0])
+        }
+        .padding()
+    }
+    .background(Color(.systemGroupedBackground))
+    .preferredColorScheme(.dark)
 }

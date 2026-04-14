@@ -13,32 +13,16 @@ struct SessionListView: View {
     var body: some View {
         Group {
             if isLoading {
-                ProgressView("Connecting...")
+                loadingView
             } else if let error = errorMessage {
-                ContentUnavailableView(
-                    "Connection Failed",
-                    systemImage: "xmark.circle",
-                    description: Text(error)
-                )
+                errorView(error)
             } else if sessions.isEmpty {
-                ContentUnavailableView(
-                    "No Sessions",
-                    systemImage: "terminal",
-                    description: Text("No active tmux sessions on this server")
-                ) {
-                    Button("New Session") {
-                        showingNewSession = true
-                    }
-                    .buttonStyle(.borderedProminent)
-                }
+                emptyView
             } else {
-                List(sessions) { session in
-                    NavigationLink(value: session.id) {
-                        SessionCardView(session: session)
-                    }
-                }
+                sessionList
             }
         }
+        .background(Color(.systemGroupedBackground))
         .navigationTitle(server.nickname)
         .navigationDestination(for: String.self) { sessionId in
             if let session = sessions.first(where: { $0.id == sessionId }) {
@@ -55,7 +39,8 @@ struct SessionListView: View {
                     Button {
                         showingNewSession = true
                     } label: {
-                        Image(systemName: "plus")
+                        Image(systemName: "plus.circle.fill")
+                            .symbolRenderingMode(.hierarchical)
                     }
                 }
             }
@@ -74,11 +59,113 @@ struct SessionListView: View {
                 Task { await createSession() }
             }
             Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Enter a name for the new tmux session")
         }
         .task {
             await loadSessions()
         }
     }
+
+    // MARK: - States
+
+    private var loadingView: some View {
+        VStack(spacing: MMSpacing.lg) {
+            Spacer()
+            ProgressView()
+                .scaleEffect(1.2)
+            Text("Connecting to \(server.host)...")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            Spacer()
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func errorView(_ error: String) -> some View {
+        VStack(spacing: MMSpacing.xl) {
+            Spacer()
+
+            Image(systemName: "wifi.exclamationmark")
+                .font(.system(size: 48))
+                .foregroundStyle(MMColors.error.opacity(0.7))
+
+            VStack(spacing: MMSpacing.sm) {
+                Text("Connection Failed")
+                    .font(.title3)
+                    .fontWeight(.semibold)
+
+                Text(error)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, MMSpacing.xxl)
+            }
+
+            Button {
+                Task { await loadSessions() }
+            } label: {
+                Label("Retry", systemImage: "arrow.clockwise")
+                    .font(.headline)
+                    .padding(.horizontal, MMSpacing.xl)
+                    .padding(.vertical, MMSpacing.md)
+            }
+            .buttonStyle(.borderedProminent)
+
+            Spacer()
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var emptyView: some View {
+        VStack(spacing: MMSpacing.xl) {
+            Spacer()
+
+            Image(systemName: "terminal")
+                .font(.system(size: 48))
+                .foregroundStyle(MMColors.teal.opacity(0.6))
+
+            VStack(spacing: MMSpacing.sm) {
+                Text("No Sessions")
+                    .font(.title3)
+                    .fontWeight(.semibold)
+
+                Text("No active tmux sessions on this server")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
+            Button {
+                showingNewSession = true
+            } label: {
+                Label("New Session", systemImage: "plus")
+                    .font(.headline)
+                    .padding(.horizontal, MMSpacing.xl)
+                    .padding(.vertical, MMSpacing.md)
+            }
+            .buttonStyle(.borderedProminent)
+
+            Spacer()
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var sessionList: some View {
+        ScrollView {
+            LazyVStack(spacing: MMSpacing.md) {
+                ForEach(sessions) { session in
+                    NavigationLink(value: session.id) {
+                        SessionCardView(session: session)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal)
+            .padding(.top, MMSpacing.sm)
+        }
+    }
+
+    // MARK: - Actions
 
     private func loadSessions() async {
         isLoading = true
@@ -104,4 +191,18 @@ struct SessionListView: View {
             errorMessage = error.localizedDescription
         }
     }
+}
+
+#Preview("With Sessions") {
+    NavigationStack {
+        SessionListView(
+            server: {
+                let s = ServerConnection(nickname: "dev-server", host: "dev.example.com", username: "curtis")
+                return s
+            }(),
+            connectionManager: ConnectionManager()
+        )
+    }
+    .preferredColorScheme(.dark)
+    .tint(MMColors.teal)
 }

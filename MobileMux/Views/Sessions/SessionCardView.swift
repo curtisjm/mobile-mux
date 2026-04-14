@@ -4,42 +4,65 @@ struct SessionCardView: View {
     let session: TmuxSession
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text(session.name)
-                    .font(.headline)
+        VStack(alignment: .leading, spacing: MMSpacing.md) {
+            // Header row
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: MMSpacing.xs) {
+                    Text(session.name)
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+
+                    Text(session.created, format: .relative(presentation: .named))
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
 
                 Spacer()
 
                 if session.isAttached {
-                    Label("Attached", systemImage: "link")
-                        .font(.caption)
-                        .foregroundStyle(.green)
+                    StatusBadge("Attached", color: MMColors.online, icon: "link")
+                } else {
+                    StatusBadge("Detached", color: MMColors.idle)
                 }
             }
 
-            HStack(spacing: 16) {
-                Label("\(session.windowCount) windows", systemImage: "rectangle.split.3x1")
-                Label("\(session.paneCount) panes", systemImage: "square.split.2x2")
+            // Stats row
+            HStack(spacing: MMSpacing.lg) {
+                Label("\(session.windowCount)", systemImage: "rectangle.split.3x1")
+                Label("\(session.paneCount)", systemImage: "square.split.2x2")
             }
-            .font(.caption)
+            .font(.subheadline)
             .foregroundStyle(.secondary)
 
             // Window name pills
             if !session.windows.isEmpty {
                 FlowLayout(spacing: 6) {
                     ForEach(session.windows) { window in
-                        Text(window.name.isEmpty ? "window \(window.index)" : window.name)
-                            .font(.caption2)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
-                            .background(.fill.tertiary)
-                            .clipShape(Capsule())
+                        HStack(spacing: 4) {
+                            if window.panes.contains(where: { $0.agentType == .claudeCode }) {
+                                Image(systemName: "cpu")
+                                    .font(.system(size: 8))
+                            }
+                            Text(window.name.isEmpty ? "window \(window.index)" : window.name)
+                        }
+                        .font(.caption2)
+                        .fontWeight(.medium)
+                        .padding(.horizontal, MMSpacing.sm)
+                        .padding(.vertical, MMSpacing.xs)
+                        .foregroundStyle(
+                            window.isActive ? MMColors.teal : .secondary
+                        )
+                        .background(
+                            window.isActive
+                                ? MMColors.teal.opacity(0.12)
+                                : Color(.tertiarySystemFill)
+                        )
+                        .clipShape(Capsule())
                     }
                 }
             }
         }
-        .padding(.vertical, 4)
+        .mmCard()
     }
 }
 
@@ -48,8 +71,7 @@ struct FlowLayout: Layout {
     var spacing: CGFloat
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let result = arrange(proposal: proposal, subviews: subviews)
-        return result.size
+        arrange(proposal: proposal, subviews: subviews).size
     }
 
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
@@ -85,4 +107,16 @@ struct FlowLayout: Layout {
 
         return (positions, CGSize(width: maxX, height: y + rowHeight))
     }
+}
+
+#Preview {
+    ScrollView {
+        VStack(spacing: MMSpacing.md) {
+            SessionCardView(session: PreviewData.sessions[0])
+            SessionCardView(session: PreviewData.sessions[1])
+        }
+        .padding()
+    }
+    .background(Color(.systemGroupedBackground))
+    .preferredColorScheme(.dark)
 }

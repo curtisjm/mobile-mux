@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// Reusable status badge for agent and connection states
 struct StatusBadge: View {
     let text: String
     let color: Color
@@ -16,38 +15,42 @@ struct StatusBadge: View {
         HStack(spacing: 4) {
             if let icon {
                 Image(systemName: icon)
-                    .font(.caption2)
+                    .font(.system(size: 9))
             }
             Text(text)
                 .font(.caption2)
                 .fontWeight(.medium)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 3)
+        .padding(.horizontal, MMSpacing.sm)
+        .padding(.vertical, MMSpacing.xs)
         .foregroundStyle(color)
         .background(color.opacity(0.12))
         .clipShape(Capsule())
     }
 
-    // Convenience initializers for common states
+    // Common states
     static var connected: StatusBadge {
-        StatusBadge("Connected", color: .green, icon: "circle.fill")
+        StatusBadge("Connected", color: MMColors.online, icon: "circle.fill")
     }
 
     static var disconnected: StatusBadge {
-        StatusBadge("Disconnected", color: .secondary, icon: "circle")
+        StatusBadge("Disconnected", color: MMColors.idle, icon: "circle")
     }
 
     static var thinking: StatusBadge {
-        StatusBadge("Thinking", color: .orange, icon: "brain")
+        StatusBadge("Thinking", color: MMColors.warning, icon: "brain")
     }
 
     static var writing: StatusBadge {
-        StatusBadge("Writing", color: .blue, icon: "pencil")
+        StatusBadge("Writing", color: MMColors.indigo, icon: "pencil")
     }
 
     static var waiting: StatusBadge {
-        StatusBadge("Waiting", color: .yellow, icon: "pause.circle")
+        StatusBadge("Waiting for input", color: MMColors.warning, icon: "hand.raised")
+    }
+
+    static var running: StatusBadge {
+        StatusBadge("Running", color: MMColors.teal, icon: "play.fill")
     }
 }
 
@@ -58,7 +61,8 @@ struct StatusBadge: View {
         StatusBadge.thinking
         StatusBadge.writing
         StatusBadge.waiting
-        StatusBadge("Custom", color: .purple, icon: "star.fill")
+        StatusBadge.running
     }
     .padding()
+    .preferredColorScheme(.dark)
 }

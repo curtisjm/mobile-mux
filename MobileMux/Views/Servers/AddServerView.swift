@@ -18,26 +18,35 @@ struct AddServerView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Server") {
+                Section {
                     TextField("Nickname", text: $nickname)
                         .textContentType(.nickname)
-                    TextField("Host", text: $host)
+                    TextField("Host or IP address", text: $host)
                         .textContentType(.URL)
                         .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
                         .keyboardType(.URL)
                     TextField("Port", text: $port)
                         .keyboardType(.numberPad)
+                } header: {
+                    Text("Server")
+                } footer: {
+                    Text("Give your server a memorable name")
                 }
 
-                Section("Authentication") {
+                Section {
                     TextField("Username", text: $username)
                         .textContentType(.username)
                         .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
 
                     Picker("Method", selection: $authMethod) {
-                        Text("SSH Key").tag(AuthMethod.key)
-                        Text("Password").tag(AuthMethod.password)
+                        Label("SSH Key", systemImage: "key.fill")
+                            .tag(AuthMethod.key)
+                        Label("Password", systemImage: "lock.fill")
+                            .tag(AuthMethod.password)
                     }
+                    .pickerStyle(.segmented)
 
                     if authMethod == .password {
                         SecureField("Password", text: $password)
@@ -46,15 +55,23 @@ struct AddServerView: View {
                             showingKeyPicker = true
                         } label: {
                             HStack {
-                                Text(keyFilename ?? "Select Key File")
+                                Label(
+                                    keyFilename ?? "Select private key",
+                                    systemImage: selectedKeyData != nil
+                                        ? "checkmark.circle.fill"
+                                        : "doc.badge.plus"
+                                )
+                                .foregroundStyle(
+                                    selectedKeyData != nil
+                                        ? MMColors.online
+                                        : Color.accentColor
+                                )
                                 Spacer()
-                                if selectedKeyData != nil {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .foregroundStyle(.green)
-                                }
                             }
                         }
                     }
+                } header: {
+                    Text("Authentication")
                 }
             }
             .navigationTitle("Add Server")
@@ -64,7 +81,8 @@ struct AddServerView: View {
                     Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { save() }
+                    Button("Add") { save() }
+                        .fontWeight(.semibold)
                         .disabled(!isValid)
                 }
             }
@@ -100,7 +118,6 @@ struct AddServerView: View {
         )
         modelContext.insert(server)
 
-        // Store credential in Keychain
         do {
             if authMethod == .password {
                 try KeychainService.shared.savePassword(password, for: server)
@@ -108,9 +125,16 @@ struct AddServerView: View {
                 try KeychainService.shared.savePrivateKey(keyData, for: server)
             }
         } catch {
-            // Credential save failed — server is saved but will need credential re-entry
+            // Credential save failed — server saved, credential re-entry needed on connect
         }
 
         dismiss()
     }
+}
+
+#Preview {
+    AddServerView()
+        .modelContainer(for: ServerConnection.self, inMemory: true)
+        .preferredColorScheme(.dark)
+        .tint(MMColors.teal)
 }
