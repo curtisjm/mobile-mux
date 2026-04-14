@@ -1,0 +1,50 @@
+name: MobileMux
+options:
+  bundleIdPrefix: com.curtisjm
+  deploymentTarget:
+    iOS: "18.0"
+  xcodeVersion: "16.0"
+  generateEmptyDirectories: true
+  groupSortPosition: top
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    IPHONEOS_DEPLOYMENT_TARGET: "18.0"
+    DEVELOPMENT_TEAM: ""
+
+packages:
+  swift-nio-ssh:
+    url: https://github.com/apple/swift-nio-ssh
+    from: "0.12.0"
+  SwiftTerm:
+    url: https://github.com/migueldeicaza/SwiftTerm
+    from: "1.2.0"
+
+targets:
+  MobileMux:
+    type: application
+    platform: iOS
+    sources:
+      - MobileMux
+    settings:
+      base:
+        INFOPLIST_FILE: MobileMux/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.curtisjm.MobileMux
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD: false
+    dependencies:
+      - package: swift-nio-ssh
+        product: NIOSSH
+      - package: SwiftTerm
+    scheme:
+      testTargets:
+        - MobileMuxTests
+
+  MobileMuxTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - MobileMuxTests
+    dependencies:
+      - target: MobileMux
