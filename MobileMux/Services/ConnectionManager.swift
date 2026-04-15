@@ -6,6 +6,7 @@ import SwiftUI
 @Observable
 final class ConnectionManager {
     private(set) var activeConnections: [UUID: ActiveConnection] = [:]
+    var isDemoMode = false
 
     struct ActiveConnection {
         let server: ServerConnection
@@ -62,6 +63,13 @@ final class ConnectionManager {
     }
 
     func state(for server: ServerConnection) -> ConnectionState {
-        activeConnections[server.id]?.state ?? .disconnected
+        if isDemoServer(server) {
+            return .connected
+        }
+        return activeConnections[server.id]?.state ?? .disconnected
+    }
+
+    func isDemoServer(_ server: ServerConnection) -> Bool {
+        isDemoMode && PreviewData.demoServers.contains { $0.id == server.id }
     }
 }

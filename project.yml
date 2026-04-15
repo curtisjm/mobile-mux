@@ -7,11 +7,18 @@ options:
   generateEmptyDirectories: true
   groupSortPosition: top
 
+configs:
+  Debug: debug
+  Release: release
+
 settings:
   base:
     SWIFT_VERSION: "6.0"
     IPHONEOS_DEPLOYMENT_TARGET: "18.0"
     DEVELOPMENT_TEAM: ""
+  configs:
+    Debug:
+      ENABLE_TESTABILITY: YES
 
 packages:
   swift-nio-ssh:
@@ -42,11 +49,25 @@ targets:
     scheme:
       testTargets:
         - MobileMuxTests
+      test:
+        config: Debug
 
   MobileMuxTests:
     type: bundle.unit-test
     platform: iOS
     sources:
       - MobileMuxTests
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_NAME: MobileMuxTests
+        PRODUCT_BUNDLE_IDENTIFIER: com.curtisjm.MobileMuxTests
+        ALWAYS_SEARCH_USER_PATHS: false
+        SWIFT_VERSION: "6.0"
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/MobileMux.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/MobileMux"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+      configs:
+        Debug:
+          SWIFT_OPTIMIZATION_LEVEL: "-Onone"
     dependencies:
       - target: MobileMux

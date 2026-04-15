@@ -1,7 +1,37 @@
 import Foundation
 
-/// Mock data for SwiftUI previews — keeps preview providers clean
+/// Mock data for SwiftUI previews and demo mode
+@MainActor
 enum PreviewData {
+    // MARK: - Demo Servers
+
+    static let demoServers: [ServerConnection] = [
+        {
+            let s = ServerConnection(nickname: "Gas Town Hub", host: "gastown.local", username: "mayor")
+            s.lastConnected = Date().addingTimeInterval(-300)
+            return s
+        }(),
+        {
+            let s = ServerConnection(nickname: "Dev Workstation", host: "dev.local", username: "curtis")
+            s.lastConnected = Date().addingTimeInterval(-7200)
+            return s
+        }(),
+    ]
+
+    /// Returns mock sessions for a demo server
+    static func sessions(forDemoServer server: ServerConnection) -> [TmuxSession] {
+        guard let index = demoServers.firstIndex(where: { $0.id == server.id }) else {
+            return sessions
+        }
+        switch index {
+        case 0: return [sessions[0]]
+        case 1: return [sessions[1]]
+        default: return sessions
+        }
+    }
+
+    // MARK: - Mock Sessions
+
     static let sessions: [TmuxSession] = [
         TmuxSession(
             id: "$0",

@@ -7,25 +7,35 @@ struct ServerListView: View {
     @State private var showingAddServer = false
     var connectionManager: ConnectionManager
 
+    private var allServers: [ServerConnection] {
+        if connectionManager.isDemoMode {
+            return PreviewData.demoServers + servers
+        }
+        return Array(servers)
+    }
+
     var body: some View {
         ScrollView {
-            if servers.isEmpty {
+            if allServers.isEmpty {
                 emptyState
             } else {
                 LazyVStack(spacing: MMSpacing.md) {
-                    ForEach(servers) { server in
+                    ForEach(allServers) { server in
                         NavigationLink(value: server) {
                             ServerCardView(
                                 server: server,
-                                state: connectionManager.state(for: server)
+                                state: connectionManager.state(for: server),
+                                isDemo: connectionManager.isDemoServer(server)
                             )
                         }
                         .buttonStyle(.plain)
                         .contextMenu {
-                            Button(role: .destructive) {
-                                deleteServer(server)
-                            } label: {
-                                Label("Delete", systemImage: "trash")
+                            if !connectionManager.isDemoServer(server) {
+                                Button(role: .destructive) {
+                                    deleteServer(server)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
                             }
                         }
                     }
@@ -40,6 +50,18 @@ struct ServerListView: View {
             SessionListView(server: server, connectionManager: connectionManager)
         }
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button {
+                    withAnimation(.snappy(duration: 0.3)) {
+                        connectionManager.isDemoMode.toggle()
+                    }
+                } label: {
+                    Image(systemName: connectionManager.isDemoMode ? "play.fill" : "play")
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(connectionManager.isDemoMode ? MMColors.teal : .secondary)
+                }
+            }
+
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     showingAddServer = true
@@ -75,15 +97,29 @@ struct ServerListView: View {
                     .multilineTextAlignment(.center)
             }
 
-            Button {
-                showingAddServer = true
-            } label: {
-                Label("Add Server", systemImage: "plus")
-                    .font(.headline)
-                    .padding(.horizontal, MMSpacing.xl)
-                    .padding(.vertical, MMSpacing.md)
+            VStack(spacing: MMSpacing.md) {
+                Button {
+                    showingAddServer = true
+                } label: {
+                    Label("Add Server", systemImage: "plus")
+                        .font(.headline)
+                        .padding(.horizontal, MMSpacing.xl)
+                        .padding(.vertical, MMSpacing.md)
+                }
+                .buttonStyle(.borderedProminent)
+
+                Button {
+                    withAnimation(.snappy(duration: 0.3)) {
+                        connectionManager.isDemoMode = true
+                    }
+                } label: {
+                    Label("Try Demo Mode", systemImage: "play.fill")
+                        .font(.subheadline)
+                        .padding(.horizontal, MMSpacing.lg)
+                        .padding(.vertical, MMSpacing.sm)
+                }
+                .buttonStyle(.bordered)
             }
-            .buttonStyle(.borderedProminent)
 
             Spacer()
         }
@@ -102,6 +138,7 @@ struct ServerListView: View {
 struct ServerCardView: View {
     let server: ServerConnection
     let state: ConnectionManager.ConnectionState
+    var isDemo: Bool = false
 
     var body: some View {
         HStack(spacing: MMSpacing.lg) {
@@ -121,9 +158,21 @@ struct ServerCardView: View {
             }
 
             VStack(alignment: .leading, spacing: MMSpacing.xs) {
-                Text(server.nickname)
-                    .font(.headline)
-                    .foregroundStyle(.primary)
+                HStack(spacing: MMSpacing.sm) {
+                    Text(server.nickname)
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+
+                    if isDemo {
+                        Text("DEMO")
+                            .font(.system(size: 9, weight: .bold, design: .rounded))
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .foregroundStyle(MMColors.teal)
+                            .background(MMColors.teal.opacity(0.15))
+                            .clipShape(Capsule())
+                    }
+                }
 
                 Text("\(server.username)@\(server.host)")
                     .font(.system(.caption, design: .monospaced))

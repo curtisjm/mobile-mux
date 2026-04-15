@@ -170,6 +170,13 @@ struct SessionListView: View {
     private func loadSessions() async {
         isLoading = true
         errorMessage = nil
+
+        if connectionManager.isDemoServer(server) {
+            sessions = PreviewData.sessions(forDemoServer: server)
+            isLoading = false
+            return
+        }
+
         do {
             let connection = try await connectionManager.connect(to: server)
             sessions = try await connection.tmux.listSessions(via: connection.ssh)
@@ -182,6 +189,7 @@ struct SessionListView: View {
 
     private func createSession() async {
         guard !newSessionName.isEmpty else { return }
+        if connectionManager.isDemoServer(server) { return }
         guard let connection = connectionManager.activeConnections[server.id] else { return }
         do {
             try await connection.tmux.newSession(name: newSessionName, via: connection.ssh)
